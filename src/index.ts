@@ -78,6 +78,15 @@ async function toPdf(content: string, options: DocumentOptions): Promise<void>{
 }
 
 window.onload = function(){
+	const fontSelect: HTMLSelectElement = document.getElementById("fontSelect") as HTMLSelectElement;
+	Object.values(StandardFonts).forEach((font, _) => {
+		let option = document.createElement("option");
+		option.value = font;
+		option.innerHTML = font.replace("-", " ");
+		fontSelect.appendChild(option);
+	});
+	fontSelect.value = StandardFonts.TimesRoman;
+
 	const form: HTMLFormElement = document.getElementById("fileForm") as HTMLFormElement;
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
@@ -85,7 +94,7 @@ window.onload = function(){
 
 		readTxt(formData.get("fileInput") as File).then((content) => {
 			const options: DocumentOptions = {
-				font: StandardFonts.TimesRoman,
+				font: fontSelect.value as StandardFonts,
 				fontSize: parseInt(formData.get("fontSize") as string),
 
 				xPadding: 50,
