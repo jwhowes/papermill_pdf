@@ -1,7 +1,7 @@
-import {PDFFont} from 'pdf-lib';
+import {StandardFonts} from 'pdf-lib';
 
 export interface DocumentOptions{
-	font: PDFFont;
+	font: StandardFonts;
 	fontSize: number;
 	xPadding: number;
 	yPadding?: number;

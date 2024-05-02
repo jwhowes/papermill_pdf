@@ -1,8 +1,7 @@
-import {PDFDocument, StandardFonts} from 'pdf-lib';
+import {PDFDocument, PDFFont, StandardFonts} from 'pdf-lib';
 import {DocumentOptions, Pages} from './util';
 
-async function readTxt(e: any): Promise<String>{
-	const file = e.target.files[0];
+async function readTxt(file: File): Promise<string>{
 	if(!file){
 		return;
 	}
@@ -10,7 +9,7 @@ async function readTxt(e: any): Promise<String>{
 	return file.text();
 }
 
-function getPages(content: string, options: DocumentOptions): Pages{
+function getPages(content: string, options: DocumentOptions, font: PDFFont): Pages{
 	let pages: Pages = [[]];
 	let currHeight: number = options.yPadding;
 	let currPage: number = 0;
@@ -19,7 +18,7 @@ function getPages(content: string, options: DocumentOptions): Pages{
 		let currWidth: number = options.xPadding;
 		pages[currPage].push("");
 		paragraph.split(" ").forEach((word, _) => {
-			let wordWidth: number = options.font.widthOfTextAtSize(word + " ", options.fontSize);
+			let wordWidth: number = font.widthOfTextAtSize(word + " ", options.fontSize);
 			if(wordWidth + currWidth >= options.width - options.xPadding){
 				if(currHeight + options.lineHeight >= options.height - options.yPadding){
 					pages.push([]);
@@ -41,7 +40,7 @@ function getPages(content: string, options: DocumentOptions): Pages{
 	return pages;
 }
 
-function writePages(pages: Pages, options: DocumentOptions, pdfDoc: PDFDocument): void{
+function writePages(pages: Pages, options: DocumentOptions, font: PDFFont, pdfDoc: PDFDocument): void{
 	pages.forEach((lines, _) => {
 		let page = pdfDoc.addPage();
 		lines.forEach((line, idx) => {
@@ -49,38 +48,27 @@ function writePages(pages: Pages, options: DocumentOptions, pdfDoc: PDFDocument)
 				x: 50,
 				y: options.height - options.yPadding - idx * options.lineHeight,
 				size: options.fontSize,
-				font: options.font
+				font: font
 			});
 		});
 	});
 }
 
-async function toPdf(content: string): Promise<void>{
+async function toPdf(content: string, options: DocumentOptions): Promise<void>{
 	const pdfDoc: PDFDocument = await PDFDocument.create();
-
-	const options: DocumentOptions = {
-		font: await pdfDoc.embedFont(StandardFonts.TimesRoman),
-		fontSize: 12,
-
-		xPadding: 50,
-
-		width: 595.28,
-		height: 841.89,
-
-		leadingHeight: 6
-	};
+	const font: PDFFont = await pdfDoc.embedFont(options.font);
 
 	if(!options.lineHeight){
-		options.lineHeight = options.font.heightAtSize(options.fontSize) + options.leadingHeight
+		options.lineHeight = font.heightAtSize(options.fontSize) + options.leadingHeight
 	}
 
 	if(!options.yPadding){
 		options.yPadding = 4 * options.fontSize;
 	}
 
-	let pages: Array<Array<string>> = getPages(content, options);
+	let pages: Pages = getPages(content, options, font);
 
-	writePages(pages, options, pdfDoc);
+	writePages(pages, options, font, pdfDoc);
 
 	const pdfBytes = await pdfDoc.save();
 	const pdfBlob = new Blob([pdfBytes], {type: 'application/pdf'})
@@ -90,7 +78,25 @@ async function toPdf(content: string): Promise<void>{
 }
 
 window.onload = function(){
-	document.getElementById("fileInput").addEventListener('change', (e) => {
-		readTxt(e).then(toPdf);
+	const form: HTMLFormElement = document.getElementById("fileForm") as HTMLFormElement;
+	form.addEventListener('submit', (e) => {
+		e.preventDefault();
+		const formData: FormData = new FormData(form);
+
+		readTxt(formData.get("fileInput") as File).then((content) => {
+			const options: DocumentOptions = {
+				font: StandardFonts.TimesRoman,
+				fontSize: parseInt(formData.get("fontSize") as string),
+
+				xPadding: 50,
+
+				width: 595.28,
+				height: 841.89,
+
+				leadingHeight: 6
+			};
+
+			toPdf(content, options);
+		});
 	});
 }
