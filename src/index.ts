@@ -1,4 +1,4 @@
-import {PDFDocument, PDFFont, StandardFonts, rgb} from 'pdf-lib';
+import {PDFDocument, PDFFont, StandardFonts} from 'pdf-lib';
 
 async function readTxt(e: any): Promise<String>{
 	const file = e.target.files[0];
@@ -44,7 +44,7 @@ async function toPdf(content: string): Promise<void>{
 	const pdfDoc: PDFDocument = await PDFDocument.create();
 
 	const font: PDFFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-	const fontSize: number = 11;
+	const fontSize: number = 12;
 	const [width, height] = [595.28, 841.89];
 
 	const leading: number = 6;
