@@ -9,41 +9,48 @@ async function readTxt(file: File): Promise<string>{
 	return file.text();
 }
 
+// Returns pages as a 2D-array of strings (each page is a list of lines)
 function getPages(content: string, options: DocumentOptions, font: PDFFont): Pages{
 	let pages: Pages = [[]];
 	let currHeight: number = options.yPadding;
 	let currPage: number = 0;
 
-	content.split("\r\n\r\n").forEach((paragraph, _) => {
-		let currWidth: number = options.xPadding;
-		pages[currPage].push("");
-		paragraph.split(" ").forEach((word, _) => {
-			let wordWidth: number = font.widthOfTextAtSize(word + " ", options.fontSize);
-			if(wordWidth + currWidth >= options.width - options.xPadding){
-				if(currHeight + options.lineHeight >= options.height - options.yPadding){
+	content = content.replace(/\t/g, "    ");
+	content = content.replace(/\r/g, "");  // Removes carriage return characters (so we default to LF endings)
+
+	content.split("\n").forEach((paragraph, _) => {
+		let currWidth: number = options.xPadding;  // Each line begins at x = xPadding (end of line is width - xPadding)
+		pages[currPage].push("");  // Begin a new empty line (new paragraph)
+		currHeight += options.lineHeight;
+		paragraph.split(" ").forEach((word, _) => {  // Loop through words in paragraph
+			let wordWidth: number;
+			try{
+				wordWidth = font.widthOfTextAtSize(word + " ", options.fontSize);
+			}catch(error){
+				window.alert("Document contains invalid character: " + error.message[22] + ". Try changing to a more standard font.");
+				throw error;
+			}
+			if(wordWidth + currWidth >= options.width - options.xPadding){  // If adding the new word would cause us to overflow the page width then we need a new line
+				if(currHeight + options.lineHeight >= options.height - options.yPadding){  // If adding said new line would cause us to overflow the page then we need a new page
 					pages.push([]);
 					currPage++;
 					currHeight = options.yPadding;
 				}
-				currHeight += options.lineHeight;
 				pages[currPage].push("");
+				currHeight += options.lineHeight;
 				currWidth = options.xPadding;
 			}
-
-			pages[currPage][pages[currPage].length - 1] += word + " ";
+			pages[currPage][pages[currPage].length - 1] += word + " ";  // Add word to line
 			currWidth += wordWidth;
 		});
-		pages[currPage].push("");
-		currHeight += 2 * options.lineHeight;
 	});
-
 	return pages;
 }
 
 function writePages(pages: Pages, options: DocumentOptions, font: PDFFont, pdfDoc: PDFDocument): void{
-	pages.forEach((lines, _) => {
+	pages.forEach((lines, _) => {  // Loop through pages, printing each to a new pdf page
 		let page = pdfDoc.addPage();
-		lines.forEach((line, idx) => {
+		lines.forEach((line, idx) => {  // Print every line on the page with a space of lineHeight between them
 			page.drawText(line, {
 				x: 50,
 				y: options.height - options.yPadding - idx * options.lineHeight,
@@ -58,16 +65,15 @@ async function toPdf(content: string, options: DocumentOptions): Promise<void>{
 	const pdfDoc: PDFDocument = await PDFDocument.create();
 	const font: PDFFont = await pdfDoc.embedFont(options.font);
 
-	if(!options.lineHeight){
+	if(!options.lineHeight){  // The programmer can choose to specify lineHeight directly, or it can be calculated with the help of leadingHeight
 		options.lineHeight = font.heightAtSize(options.fontSize) + options.leadingHeight
 	}
 
-	if(!options.yPadding){
+	if(!options.yPadding){  // If yPadding isn't specified default to 4 * font size
 		options.yPadding = 4 * options.fontSize;
 	}
 
 	let pages: Pages = getPages(content, options, font);
-
 	writePages(pages, options, font, pdfDoc);
 
 	const pdfBytes = await pdfDoc.save();
@@ -78,6 +84,7 @@ async function toPdf(content: string, options: DocumentOptions): Promise<void>{
 }
 
 window.onload = function(){
+	// Create drop down list of fonts
 	const fontSelect: HTMLSelectElement = document.getElementById("fontSelect") as HTMLSelectElement;
 	Object.values(StandardFonts).forEach((font, _) => {
 		let option = document.createElement("option");
@@ -93,7 +100,7 @@ window.onload = function(){
 		const formData: FormData = new FormData(form);
 
 		readTxt(formData.get("fileInput") as File).then((content) => {
-			const options: DocumentOptions = {
+			const options: DocumentOptions = {  // Options for pdf design (font taken from user input)
 				font: fontSelect.value as StandardFonts,
 				fontSize: parseInt(formData.get("fontSize") as string),
 
