@@ -1,6 +1,7 @@
 import {StandardFonts} from 'pdf-lib';
 
 export interface DocumentOptions{
+	fileName: string;
 	font: StandardFonts;
 	fontSize: number;
 	xPadding: number;

@@ -80,7 +80,12 @@ async function toPdf(content: string, options: DocumentOptions): Promise<void>{
 	const pdfBlob = new Blob([pdfBytes], {type: 'application/pdf'})
 	const objectUrl = URL.createObjectURL(pdfBlob);
 
-	window.open(objectUrl);
+	const aTag = document.createElement("a");
+	aTag.href = objectUrl;
+	aTag.download = options.fileName;
+
+	aTag.click();
+	window.URL.revokeObjectURL(objectUrl);
 }
 
 window.onload = function(){
@@ -98,9 +103,15 @@ window.onload = function(){
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
 		const formData: FormData = new FormData(form);
+		let file: File = formData.get("fileInput") as File;
+		let fileName: string = file.name;
 
-		readTxt(formData.get("fileInput") as File).then((content) => {
+		let pos: number = fileName.includes(".") ? fileName.lastIndexOf(".") : fileName.length;
+		fileName = fileName.substring(0, pos) + ".pdf";
+
+		readTxt(file).then((content) => {
 			const options: DocumentOptions = {  // Options for pdf design (font taken from user input)
+				fileName: fileName,
 				font: fontSelect.value as StandardFonts,
 				fontSize: parseInt(formData.get("fontSize") as string),
 
