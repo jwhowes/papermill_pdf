@@ -12,4 +12,22 @@ export interface DocumentOptions{
 	lineHeight?: number;
 }
 
-export type Pages = Array<Array<string>>;
+export class Line{
+	text: string;
+	neededStretch: number;
+
+	constructor(text: string){
+		this.text = text;
+		this.neededStretch = 0;
+	}
+	
+	addWord(word: string){
+		this.text += word;
+	}
+
+	addStretch(stretch: number): void{
+		this.neededStretch = stretch;
+	}
+}
+
+export type Pages = Array<Array<Line>>;
